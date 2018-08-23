@@ -1,0 +1,868 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "C:\\Anaconda\\lib\\site-packages\\sklearn\\cross_validation.py:44: DeprecationWarning: This module was deprecated in version 0.18 in favor of the model_selection module into which all the refactored classes and functions are moved. Also note that the interface of the new CV iterators are different from that of this module. This module will be removed in 0.20.\n",
+      "  \"This module will be removed in 0.20.\", DeprecationWarning)\n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import scipy as sp\n",
+    "from sklearn.cross_validation import train_test_split\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "from sklearn.naive_bayes import MultinomialNB\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn import metrics\n",
+    "from datetime import datetime\n",
+    "from imblearn.over_sampling import SMOTE\n",
+    "from sklearn.datasets import make_classification\n",
+    "from sklearn.metrics import confusion_matrix, classification_report,accuracy_score\n",
+    "from sklearn.svm import LinearSVC\n",
+    "from collections import Counter\n",
+    "from sklearn.svm import SVC\n",
+    "from sklearn import svm\n",
+    "from sklearn.cross_validation import cross_val_predict\n",
+    "\n",
+    "from sklearn import cross_validation\n",
+    "from sklearn.model_selection import cross_val_score"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Read 100000 random sample"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": true,
+    "scrolled": false
+   },
+   "outputs": [],
+   "source": [
+    "data = pd.read_csv('sample15.csv',\n",
+    "                   encoding='utf-8',  \n",
+    "                    engine='python',\n",
+    "                   memory_map=True,\n",
+    "                   error_bad_lines=False,\n",
+    "                    na_values='NaN')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style>\n",
+       "    .dataframe thead tr:only-child th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: left;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Unnamed: 0</th>\n",
+       "      <th>review_body</th>\n",
+       "      <th>star_rating</th>\n",
+       "      <th>review_headline</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>74201</td>\n",
+       "      <td>I am not an audiophile, but I am very sensitiv...</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfect Sound Stage and Style...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>39210</td>\n",
+       "      <td>These tapes work just fine in my Sony HD Camco...</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Great Tapes for a HD Sony Camcorder</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>44925</td>\n",
+       "      <td>This case could use a snugger fit as the playe...</td>\n",
+       "      <td>3</td>\n",
+       "      <td>Sony NWZ-S630 Case Not Bad, But...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>15673</td>\n",
+       "      <td>One of the 2 cables was bad coming out of the ...</td>\n",
+       "      <td>1</td>\n",
+       "      <td>Media bridge HDMI cable</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>66863</td>\n",
+       "      <td>I've had these earbuds for a couple months now...</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Top quality earbuds</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   Unnamed: 0                                        review_body  star_rating  \\\n",
+       "0       74201  I am not an audiophile, but I am very sensitiv...            5   \n",
+       "1       39210  These tapes work just fine in my Sony HD Camco...            5   \n",
+       "2       44925  This case could use a snugger fit as the playe...            3   \n",
+       "3       15673  One of the 2 cables was bad coming out of the ...            1   \n",
+       "4       66863  I've had these earbuds for a couple months now...            5   \n",
+       "\n",
+       "                       review_headline  \n",
+       "0     Perfect Sound Stage and Style...  \n",
+       "1  Great Tapes for a HD Sony Camcorder  \n",
+       "2   Sony NWZ-S630 Case Not Bad, But...  \n",
+       "3              Media bridge HDMI cable  \n",
+       "4                  Top quality earbuds  "
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "data=data.dropna()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<bound method DataFrame.info of        Unnamed: 0                                        review_body  \\\n",
+       "0           74201  I am not an audiophile, but I am very sensitiv...   \n",
+       "1           39210  These tapes work just fine in my Sony HD Camco...   \n",
+       "2           44925  This case could use a snugger fit as the playe...   \n",
+       "3           15673  One of the 2 cables was bad coming out of the ...   \n",
+       "4           66863  I've had these earbuds for a couple months now...   \n",
+       "5           98538  Is beatifull bus the sound isnt good whithout ...   \n",
+       "6           62896  This is a dandy little device.  If you listen ...   \n",
+       "7           43285                                             5 star   \n",
+       "8           21066  The microphone on my iPad 2 was not working an...   \n",
+       "9           73741  I like the way these earphones seal out the su...   \n",
+       "10          54378  It was simple. Hooked it up to the tv, ran a c...   \n",
+       "11           7024  It has many features, some are poorly designed...   \n",
+       "12          22263  a good charger,,but I noticed that if I remove...   \n",
+       "13          23892  My son Miguel who is 9 loved these will buy mo...   \n",
+       "14          76972  I bought these to use as surround sound speake...   \n",
+       "15          28664  I purchased a refurbished one, and really enjo...   \n",
+       "16          45251  As others have already stated, this device doe...   \n",
+       "17          86389                      Seems good and fast shipping.   \n",
+       "18          18857  I bought this to install a 2013 55&#34; Samsun...   \n",
+       "19          15056  I work long hours so I like to watch (but real...   \n",
+       "20          93538  not fancy, not expensive, provides another lay...   \n",
+       "21          62880  very good mechanical attributes but quite poor...   \n",
+       "22          45441  I love it. Plugged it in when it got here ship...   \n",
+       "23           9629  These batteries are excellent, I usually build...   \n",
+       "24          48972  Bought a pair of these in white - they're kind...   \n",
+       "25          61277  Pros: No drivers needed. True plug and play. S...   \n",
+       "26          94326  The turntable is very cool. It is sleek and ve...   \n",
+       "27          24917  &#34;I got it quickly, but the replacement par...   \n",
+       "28          89011  I use my touch for the kids to play games on a...   \n",
+       "29          40154  Perfect , delivery was great, no set up needed...   \n",
+       "...           ...                                                ...   \n",
+       "99970       69893  This was a very bad purchase.  I bought this i...   \n",
+       "99971       73325                                        Its amazing   \n",
+       "99972       93193                    fast shipping and works perfect   \n",
+       "99973       19910  Almost no impact protection. Scratch protectio...   \n",
+       "99974       43800  I was in Walmart and needed another HDMI cable...   \n",
+       "99975       99960  Best headphones you can get for under $40. Per...   \n",
+       "99976       12423                                       good quality   \n",
+       "99977       78971  Cute how the product description doesn't menti...   \n",
+       "99978       26289  I have two computers and this device lets me h...   \n",
+       "99979       67379  August 2015 I got new spindle of these and my ...   \n",
+       "99980        6024  If it wasn't for the fact that it plays an Ipo...   \n",
+       "99981       79325                  quality construction, good price.   \n",
+       "99982       12598  I've got a 47&#34; tv on this stand.  It's har...   \n",
+       "99983        8909                  Good product a little pricey tho.   \n",
+       "99984       47880  I have enjoyed my rock speakers for a little w...   \n",
+       "99985       22040  It's an okay RCA cable... nothing spectacular,...   \n",
+       "99986       21958  Excellent cables, best around for the price. l...   \n",
+       "99987       87580  I set everything up and it worked great with m...   \n",
+       "99988       88246  WARNING: THIS MP3 PLAYER IS NOT SWEAT/MOISTURE...   \n",
+       "99989        2564  It does exactly what I wanted and it does not ...   \n",
+       "99990       86080  Great little product, I got it shipped here mu...   \n",
+       "99991       33482  I Love this clock radio. I had an ihome from 2...   \n",
+       "99992       51388  Nice flat reproduction. Maybe a little too fla...   \n",
+       "99993       19459  Speakers sound decent for what they cost. I di...   \n",
+       "99994        9873  Clean finish; fits the AA battery almost like ...   \n",
+       "99995       81626  These boxes look very nice and meet my needs b...   \n",
+       "99996       50385              Excellent, exactly what we had wanted   \n",
+       "99997         640  I got this docking system in 2008 for my birth...   \n",
+       "99998       49030              Definitely works great for the price.   \n",
+       "99999       81461  I really like the nano, it holds a lot of song...   \n",
+       "\n",
+       "       star_rating                                    review_headline  \n",
+       "0                5                   Perfect Sound Stage and Style...  \n",
+       "1                5                Great Tapes for a HD Sony Camcorder  \n",
+       "2                3                 Sony NWZ-S630 Case Not Bad, But...  \n",
+       "3                1                            Media bridge HDMI cable  \n",
+       "4                5                                Top quality earbuds  \n",
+       "5                3                                               Goog  \n",
+       "6                5              Improves Computer Audio for IEM or HP  \n",
+       "7                5                                         Five Stars  \n",
+       "8                5                         Worked well with my iPad 2  \n",
+       "9                5                          These Earphones Work Well  \n",
+       "10               5                                         works well  \n",
+       "11               2     cheap with many features, but difficult to use  \n",
+       "12               4                                    a good charger,  \n",
+       "13               5              Great head phones :) will buy again .  \n",
+       "14               5                                           Amazing!  \n",
+       "15               4  Great sound quality, lots of storage, worth th...  \n",
+       "16               4                                   I am impressed..  \n",
+       "17               5                                         Five Stars  \n",
+       "18               5  A nearly perfect product; looks great with a t...  \n",
+       "19               5                          Got exactly what I wanted  \n",
+       "20               4                                 simple & effective  \n",
+       "21               4                                         Four Stars  \n",
+       "22               4                                         Four Stars  \n",
+       "23               5               Let's just say I no longer use Sony.  \n",
+       "24               2                                              Medis  \n",
+       "25               4                                       Good remote.  \n",
+       "26               4            Hardware great, but EZ S/W not so great  \n",
+       "27               2                              Not really compatible  \n",
+       "28               2                               Older version better  \n",
+       "29               5                        Perfect, delivery was great  \n",
+       "...            ...                                                ...  \n",
+       "99970            1                                           Terrible  \n",
+       "99971            5                                         Five Stars  \n",
+       "99972            5                                              works  \n",
+       "99973            4                   Just another hard sillicone case  \n",
+       "99974            5              You can't find one in a store better!  \n",
+       "99975            5                          Great Bang for your buck!  \n",
+       "99976            5                                         Five Stars  \n",
+       "99977            1                        They \"forget\" to mention...  \n",
+       "99978            5                                     Computer to TV  \n",
+       "99979            1            Avoid NEW Verbatim DL discs made in UAE  \n",
+       "99980            1     Another example of planned obsolescence! JUNK!  \n",
+       "99981            5                                        good price.  \n",
+       "99982            3                Doesn't quite hold the tv straight.  \n",
+       "99983            2                                          Two Stars  \n",
+       "99984            5                                      Great Product  \n",
+       "99985            3  Better than retail generics, not quite HiFi grade  \n",
+       "99986            5        Excellent cables, best around for the price  \n",
+       "99987            1                            You're taking a gamble.  \n",
+       "99988            1                       BEWARE! NOT SWEAT RESISTANT!  \n",
+       "99989            5                                    Simple and easy  \n",
+       "99990            4                Great Product with a Little Problem  \n",
+       "99991            5                                        Easy to use  \n",
+       "99992            4  Good, wish these were more available in the US...  \n",
+       "99993            3                 Average sound, poor paint quality.  \n",
+       "99994            5            fits the AA battery almost like a glove  \n",
+       "99995            4              The snaps come undone somewhat easily  \n",
+       "99996            5                                 Excellent Purchase  \n",
+       "99997            4                                            Love it  \n",
+       "99998            5                                         Five Stars  \n",
+       "99999            5                                  I love the nano!!  \n",
+       "\n",
+       "[100000 rows x 4 columns]>"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data.info"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "text=data['review_body'].values\n",
+    "star=data['star_rating']"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Select the first 100000 data sample\n",
+    "old=data.loc[:100000]"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Write the random sample to desk\n",
+    "new.to_csv('sample1.csv', encoding='utf-8')"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {},
+   "source": [
+    "data1= data[['review_body','star_rating','review_headline','pos_neg']]"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Random select 100000 data sample\n",
+    "new=data1.sample(n=100000)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Write the random sample to desk\n",
+    "data1.to_csv('video_sample.csv', encoding='utf-8')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {
+    "collapsed": true,
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "X=data['review_headline'].values"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "y=data['star_rating']"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {},
+   "source": [
+    "# split positive and negative review based on rating\n",
+    "data['pos_neg']=['Positive' if x> 3 else 'Negative' for x in data.star_rating]"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {},
+   "source": [
+    "y=data['pos_neg']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# TfidfVectorizer: ngram_range=(1,2),stop_words='english'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(100000, 99093)\n",
+      "0:00:01.327905\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "C:\\Anaconda\\lib\\site-packages\\sklearn\\feature_extraction\\text.py:1059: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.\n",
+      "  if hasattr(X, 'dtype') and np.issubdtype(X.dtype, np.float):\n"
+     ]
+    }
+   ],
+   "source": [
+    "#TfidfVectorizer\n",
+    "t1 = datetime.now()\n",
+    "vect=TfidfVectorizer(ngram_range=(1,2),stop_words='english')\n",
+    "train_dtm = vect.fit_transform(X)\n",
+    "print(train_dtm.shape)\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Split the original data sample"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "# Split the original data sample\n",
+    "X_train, X_test, y_train, y_test = train_test_split(train_dtm, y ,\n",
+    "                                                    test_size=0.3, random_state=100)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<70000x99093 sparse matrix of type '<class 'numpy.float64'>'\n",
+       "\twith 301268 stored elements in Compressed Sparse Row format>"
+      ]
+     },
+     "execution_count": 37,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "X_train"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Resampling on training data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original dataset shape Counter({5: 40210, 4: 12212, 1: 8023, 3: 5382, 2: 4173})\n",
+      "Resampled dataset shape Counter({1: 4173, 2: 4173, 3: 4173, 4: 4173, 5: 4173})\n",
+      "0:00:00.043038\n"
+     ]
+    }
+   ],
+   "source": [
+    "#RandomUnderSampler\n",
+    "from imblearn.under_sampling import RandomUnderSampler\n",
+    "t1 = datetime.now()\n",
+    "print('Original dataset shape {}'.format(Counter(y_train)))\n",
+    "rus = RandomUnderSampler(random_state=100)\n",
+    "X_res, y_res = rus.fit_sample(X_train, y_train)\n",
+    "print('Resampled dataset shape {}'.format(Counter(y_res)))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Perform SMOTE on training set only\n",
+    "t1 = datetime.now()\n",
+    "print('Original dataset shape {}'.format(Counter(y_train)))\n",
+    "sm = SMOTE(random_state=100)\n",
+    "X_res, y_res = sm.fit_sample(X_train, y_train) \n",
+    "print('Resampled dataset shape {}'.format(Counter(y_res)))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Test on original imbalanced data sample"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true,
+    "scrolled": true
+   },
+   "source": [
+    "# Naive Bayes \n",
+    "# imbalanced\n",
+    "t1 = datetime.now()\n",
+    "nb = MultinomialNB()\n",
+    "nb.fit(X_train, y_train)\n",
+    "y_pred_class = nb.predict(X_test)\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "scrolled": true
+   },
+   "source": [
+    "#LinearSVC\n",
+    "# imbalanced\n",
+    "t1 = datetime.now()\n",
+    "lin_clf = LinearSVC()\n",
+    "clf=lin_clf.fit(X_train, y_train)\n",
+    "y_pred_class = clf.predict(X_test)\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {},
+   "source": [
+    "#LogisticRegression\n",
+    "# imbalanced\n",
+    "t1 = datetime.now()\n",
+    "logreg = LogisticRegression()\n",
+    "logreg.fit(X_train, y_train)\n",
+    "y_pred_class = logreg.predict(X_test)\n",
+    "\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Test on balanced data sample"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "# Naive Bayes \n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "nb = MultinomialNB()\n",
+    "nb.fit(X_res, y_res)\n",
+    "y_pred_class = nb.predict(X_test)\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true
+   },
+   "source": [
+    "#LinearSVC\n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "lin_clf = LinearSVC()\n",
+    "clf=lin_clf.fit(X_res, y_res)\n",
+    "y_pred_class = clf.predict(X_test)\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "collapsed": true,
+    "scrolled": false
+   },
+   "source": [
+    "#LogisticRegression\n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "logreg = LogisticRegression()\n",
+    "logreg = logreg.fit(X_res, y_res)\n",
+    "y_pred_class = logreg.predict(X_test)\n",
+    "\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 10-fold cross validation on resample data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "10-fold cross validation average accuracy: 0.623\n",
+      "             precision    recall  f1-score   support\n",
+      "\n",
+      "          1       0.85      0.35      0.50      3399\n",
+      "          2       0.00      0.00      0.00      1738\n",
+      "          3       0.70      0.04      0.07      2337\n",
+      "          4       0.42      0.01      0.01      5122\n",
+      "          5       0.61      1.00      0.76     17404\n",
+      "\n",
+      "avg / total       0.58      0.62      0.50     30000\n",
+      "\n",
+      "0:00:00.311216\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "C:\\Anaconda\\lib\\site-packages\\sklearn\\metrics\\classification.py:1113: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples.\n",
+      "  'precision', 'predicted', average, warn_for)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Naive Bayes 10-fold cross validation \n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "nb = MultinomialNB()\n",
+    "nb = nb.fit(X_res, y_res)\n",
+    "y_pred_class = cross_validation.cross_val_predict(nb,X_test,y_test,cv=10)\n",
+    "\n",
+    "print(\"10-fold cross validation average accuracy: %.3f\" %accuracy_score(y_test,y_pred_class))\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "10-fold cross validation average accuracy: 0.644\n",
+      "             precision    recall  f1-score   support\n",
+      "\n",
+      "          1       0.67      0.59      0.63      3399\n",
+      "          2       0.24      0.08      0.11      1738\n",
+      "          3       0.33      0.13      0.18      2337\n",
+      "          4       0.35      0.13      0.19      5122\n",
+      "          5       0.68      0.93      0.79     17404\n",
+      "\n",
+      "avg / total       0.57      0.64      0.58     30000\n",
+      "\n",
+      "0:00:05.373737\n"
+     ]
+    }
+   ],
+   "source": [
+    "#LinearSVC 10-fold cross validation \n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "lin_clf = LinearSVC()\n",
+    "clf=lin_clf.fit(X_res, y_res)\n",
+    "y_pred_class = cross_validation.cross_val_predict(clf,X_test,y_test,cv=10)\n",
+    "\n",
+    "print(\"10-fold cross validation average accuracy: %.3f\" %accuracy_score(y_test,y_pred_class))\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "10-fold cross validation average accuracy: 0.646\n",
+      "             precision    recall  f1-score   support\n",
+      "\n",
+      "          1       0.72      0.53      0.61      3399\n",
+      "          2       0.33      0.02      0.04      1738\n",
+      "          3       0.55      0.08      0.14      2337\n",
+      "          4       0.46      0.07      0.12      5122\n",
+      "          5       0.65      0.98      0.78     17404\n",
+      "\n",
+      "avg / total       0.60      0.65      0.55     30000\n",
+      "\n",
+      "0:00:06.260350\n"
+     ]
+    }
+   ],
+   "source": [
+    "#LogisticRegression 10-fold cross validation \n",
+    "# balanced\n",
+    "t1 = datetime.now()\n",
+    "logreg = LogisticRegression()\n",
+    "\n",
+    "logreg = logreg.fit(X_res, y_res)\n",
+    "\n",
+    "y_pred_class = cross_validation.cross_val_predict(logreg,X_test,y_test,cv=10)\n",
+    "\n",
+    "print(\"10-fold cross validation average accuracy: %.3f\" %accuracy_score(y_test,y_pred_class))\n",
+    "print(classification_report(y_test,y_pred_class))\n",
+    "\n",
+    "print(datetime.now() - t1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
